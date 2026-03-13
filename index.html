@@ -2,75 +2,120 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Wortsuche Spiel</title>
+<title>Wortsuche</title>
 
 <style>
 
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+font-family:Arial,Helvetica,sans-serif;
+}
+
 body{
-font-family:Arial;
-text-align:center;
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
 transition:0.3s;
 }
 
+.light{
+background:#f3f5f9;
+color:#111;
+}
+
 .dark{
-background:#111;
+background:#121417;
 color:white;
 }
 
-.light{
-background:#f2f2f2;
-color:black;
+.container{
+width:360px;
+height:640px;
+border-radius:25px;
+box-shadow:0 10px 40px rgba(0,0,0,0.2);
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+gap:20px;
+padding:20px;
+background:rgba(255,255,255,0.8);
+backdrop-filter:blur(10px);
+}
+
+.dark .container{
+background:#1e2126;
 }
 
 button{
-padding:10px 18px;
-margin:5px;
-font-size:16px;
+padding:10px 20px;
+border:none;
+border-radius:10px;
 cursor:pointer;
+font-size:16px;
 }
 
-#grid{
+.primary{
+background:#4f7cff;
+color:white;
+}
+
+.secondary{
+background:#ddd;
+}
+
+.dark .secondary{
+background:#333;
+color:white;
+}
+
+.grid{
 display:grid;
 grid-template-columns:repeat(4,70px);
 gap:10px;
-justify-content:center;
-margin-top:20px;
 }
 
 .tile{
 width:70px;
 height:70px;
-font-size:30px;
-font-weight:bold;
-border-radius:10px;
-border:2px solid #888;
+border-radius:12px;
 display:flex;
 align-items:center;
 justify-content:center;
-cursor:pointer;
+font-size:28px;
+font-weight:bold;
 background:white;
+cursor:pointer;
+box-shadow:0 3px 8px rgba(0,0,0,0.2);
 }
 
 .dark .tile{
-background:#222;
+background:#2c3138;
 }
 
 .selected{
-background:#4caf50!important;
+background:#4f7cff;
 color:white;
 }
 
 .hidden{
-visibility:hidden;
+opacity:0;
+pointer-events:none;
 }
 
-#game{
-display:none;
-}
-
+#game,
 #win{
 display:none;
-margin-top:30px;
+flex-direction:column;
+align-items:center;
+gap:15px;
+}
+
+ul{
+list-style:none;
 }
 
 </style>
@@ -78,16 +123,18 @@ margin-top:30px;
 
 <body class="light">
 
-<h1>Wortsuche</h1>
+<div class="container">
 
 <div id="menu">
 
-<button onclick="startGame('normal')">Normal Modus</button>
-<button onclick="startGame('endless')">Endlos Modus</button>
+<h2>Wortsuche</h2>
+
+<button class="primary" onclick="startGame('normal')">Normal</button>
+<button class="primary" onclick="startGame('endless')">Endlos</button>
 
 <br><br>
 
-<button onclick="toggleTheme()">Hell/Dunkel</button>
+<button class="secondary" onclick="toggleTheme()">Hell/Dunkel</button>
 
 </div>
 
@@ -95,46 +142,42 @@ margin-top:30px;
 
 <h3>Zeit: <span id="time">0</span>s</h3>
 
-<div id="grid"></div>
+<div id="grid" class="grid"></div>
 
-<br>
-
-<button onclick="checkWord()">Wort prüfen</button>
-
-<button id="endBtn" onclick="endEndless()" style="display:none">Ende</button>
+<button class="primary" onclick="checkWord()">Wort prüfen</button>
+<button class="secondary" id="endBtn" onclick="endEndless()">Ende</button>
 
 </div>
 
 <div id="win">
 
-<h2>Gewonnen!</h2>
+<h2>Fertig!</h2>
 
 <p>Zeit: <span id="finalTime"></span></p>
-
 <p>Highscore: <span id="highscore"></span></p>
 
-<p>Gefundene Wörter:</p>
+<p>Gefundene Wörter</p>
+<ul id="wordList"></ul>
 
-<ul id="words"></ul>
+<button class="primary" onclick="location.reload()">Nochmal</button>
 
-<button onclick="location.reload()">Nochmal spielen</button>
+</div>
 
 </div>
 
 <script>
 
-const WORDS = [
-"HAUS","MAUS","BAUM","AUTO","WIND","HAND","KIND","MOND",
-"SAND","STERN","WORT","BROT","BILD","STADT"
-];
+const WORDS=[
+"HAUS","MAUS","BAUM","AUTO","MOND","WIND","HAND",
+"KIND","SAND","STERN","WORT","BROT","BILD","STADT"
+]
 
-let mode=""
+let mode
 let grid=[]
 let selected=[]
-let foundWords=[]
+let found=[]
 let startTime
-let timerInterval
-let targetWords=[]
+let timer
 
 function toggleTheme(){
 
@@ -148,51 +191,55 @@ function startGame(m){
 mode=m
 
 document.getElementById("menu").style.display="none"
-document.getElementById("game").style.display="block"
+document.getElementById("game").style.display="flex"
 
 if(mode==="endless"){
-document.getElementById("endBtn").style.display="inline-block"
+document.getElementById("endBtn").style.display="block"
+}else{
+document.getElementById("endBtn").style.display="none"
 }
 
 startTime=Date.now()
 
-timerInterval=setInterval(()=>{
+timer=setInterval(()=>{
 document.getElementById("time").innerText=
 Math.floor((Date.now()-startTime)/1000)
 },1000)
 
-if(mode==="normal"){
-
-targetWords=[]
-while(targetWords.length<4){
-
-let w=WORDS[Math.floor(Math.random()*WORDS.length)]
-
-if(!targetWords.includes(w)) targetWords.push(w)
-
-}
-
-let letters=[]
-targetWords.forEach(w=>{
-letters.push(...w.split(""))
-})
-
-shuffle(letters)
-grid=letters
-
-}else{
-
-let w=randomWord()
-grid=w.split("")
-}
+if(mode==="normal") generateNormal()
+else generateEndless()
 
 drawGrid()
 
 }
 
-function randomWord(){
+function generateNormal(){
 
-return WORDS[Math.floor(Math.random()*WORDS.length)]
+let words=[]
+
+while(words.length<4){
+
+let w=WORDS[Math.floor(Math.random()*WORDS.length)]
+
+if(!words.includes(w)) words.push(w)
+
+}
+
+grid=[]
+
+words.forEach(w=>{
+grid.push(...w.split(""))
+})
+
+shuffle(grid)
+
+}
+
+function generateEndless(){
+
+let w=WORDS[Math.floor(Math.random()*WORDS.length)]
+grid=w.split("")
+shuffle(grid)
 
 }
 
@@ -215,6 +262,7 @@ g.innerHTML=""
 grid.forEach((l,i)=>{
 
 let d=document.createElement("div")
+
 d.className="tile"
 d.innerText=l
 
@@ -231,6 +279,7 @@ function select(i,el){
 if(selected.length>=4)return
 
 el.classList.add("selected")
+
 selected.push({i,el})
 
 }
@@ -243,36 +292,27 @@ let word=selected.map(x=>grid[x.i]).join("")
 
 if(WORDS.includes(word)){
 
-foundWords.push(word)
+found.push(word)
 
 selected.forEach(s=>{
 s.el.classList.add("hidden")
 grid[s.i]=""
 })
 
+grid=grid.filter(x=>x!="")
+
 if(mode==="endless"){
 
-let newWord=randomWord()
+let w=WORDS[Math.floor(Math.random()*WORDS.length)]
 
-for(let i=0;i<4;i++){
-
-grid.push(newWord[i])
+grid.push(...w.split(""))
+shuffle(grid)
 
 }
 
-grid=grid.filter(x=>x!="")
-
-shuffle(grid)
-
 drawGrid()
 
-}else{
-
-grid=grid.filter(x=>x!="")
-
-drawGrid()
-
-if(grid.length===0){
+if(mode==="normal" && grid.length===0){
 
 win()
 
@@ -280,39 +320,36 @@ win()
 
 }
 
-}
-
 selected.forEach(s=>s.el.classList.remove("selected"))
-
 selected=[]
 
 }
 
 function win(){
 
-clearInterval(timerInterval)
+clearInterval(timer)
 
 document.getElementById("game").style.display="none"
-document.getElementById("win").style.display="block"
+document.getElementById("win").style.display="flex"
 
 let time=Math.floor((Date.now()-startTime)/1000)
 
 document.getElementById("finalTime").innerText=time+"s"
 
-let hs=localStorage.getItem("wort_highscore")
+let hs=localStorage.getItem("wortHigh")
 
-if(!hs||time<hs){
+if(!hs || time<hs){
 
-localStorage.setItem("wort_highscore",time)
+localStorage.setItem("wortHigh",time)
 hs=time
 
 }
 
 document.getElementById("highscore").innerText=hs+"s"
 
-let ul=document.getElementById("words")
+const ul=document.getElementById("wordList")
 
-foundWords.forEach(w=>{
+found.forEach(w=>{
 let li=document.createElement("li")
 li.innerText=w
 ul.appendChild(li)
