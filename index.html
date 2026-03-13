@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wortsuche 4x4</title>
+<title>Wortsuche 4x4 - College Style</title>
 <style>
   body {
-    font-family: Arial, sans-serif;
+    font-family: 'Arial Black', sans-serif;
     background-color: #111;
     color: #fff;
     display: flex;
@@ -17,29 +17,42 @@
   }
   h1 {
     margin-bottom: 10px;
+    font-size: 36px;
+    text-shadow: 2px 2px #0000ff;
   }
   #grid {
     display: grid;
-    grid-template-columns: repeat(4, 70px);
-    grid-gap: 8px;
+    grid-template-columns: repeat(4, 80px);
+    grid-gap: 10px;
     margin-top: 20px;
   }
   .cell {
-    width: 70px;
-    height: 70px;
+    width: 80px;
+    height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
-    background-color: #222;
-    border-radius: 8px;
+    font-size: 32px;
+    background: #222;
+    border-radius: 12px;
     cursor: pointer;
     user-select: none;
-    transition: background-color 0.2s;
+    box-shadow: 0 4px #00008b;
+    transition: 0.2s all;
   }
   .cell.selected {
-    background-color: #ffcc00;
-    color: #000;
+    background-color: #1e90ff;
+    color: #fff;
+    transform: translateY(2px);
+    box-shadow: 0 2px #00008b;
+  }
+  .cell.wrong {
+    animation: blinkRed 0.3s ease 0s 2;
+  }
+  @keyframes blinkRed {
+    0% { background-color: #ff0000; color: #fff; }
+    50% { background-color: #222; color: #fff; }
+    100% { background-color: #ff0000; color: #fff; }
   }
   #winPanel {
     display: none;
@@ -53,8 +66,8 @@
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    background-color: #ffcc00;
-    color: #000;
+    background-color: #1e90ff;
+    color: #fff;
   }
 </style>
 </head>
@@ -75,6 +88,7 @@ const wordDatabase = ["HAUS", "HUND", "MAUS", "TIER", "BAUM", "AUTO", "GELD", "B
 let grid = [];
 let selected = [];
 let foundWords = [];
+let wordsToFind = [];
 let startTime;
 let highscore = null;
 
@@ -83,15 +97,12 @@ function shuffle(array) {
 }
 
 function startGame() {
-  // reset
   selected = [];
   foundWords = [];
   document.getElementById('winPanel').style.display = 'none';
   
-  // 4 zufällige Wörter wählen
-  const words = shuffle(wordDatabase).slice(0, 4);
-  foundWords.wordsToFind = words; // speichern
-  const letters = words.join('').split('');
+  wordsToFind = shuffle(wordDatabase).slice(0,4);
+  const letters = wordsToFind.join('').split('');
   grid = shuffle(letters);
   
   startTime = Date.now();
@@ -102,6 +113,7 @@ function renderGrid() {
   const gridDiv = document.getElementById('grid');
   gridDiv.innerHTML = '';
   grid.forEach((letter, i) => {
+    if (letter === '') return; // verschwundene Felder
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.textContent = letter;
@@ -122,17 +134,38 @@ function selectLetter(index) {
 }
 
 function checkWord() {
-  const word = selected.map(i => grid[i]).join('');
-  if (foundWords.wordsToFind.includes(word) && !foundWords.includes(word)) {
-    foundWords.push(word);
-    selected.forEach(i => grid[i] = ''); // verschwinden lassen
-    selected = [];
-    renderGrid();
-    checkWin();
-  } else {
-    alert("Falsches Wort!");
-    selected = [];
-    renderGrid();
+  const lettersSelected = selected.map(i => grid[i]);
+  const wordFormed = lettersSelected.sort().join('');
+  
+  let found = false;
+  for (const w of wordsToFind) {
+    if (!foundWords.includes(w) && w.split('').sort().join('') === wordFormed) {
+      foundWords.push(w);
+      selected.forEach(i => grid[i] = '');
+      selected = [];
+      renderGrid();
+      checkWin();
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    // blinke rot
+    selected.forEach(i => {
+      const cellDivs = document.getElementById('grid').childNodes;
+      for (let cell of cellDivs) {
+        if (cell.textContent === grid[i]) {
+          cell.classList.add('wrong');
+        }
+      }
+    });
+    setTimeout(() => {
+      const cellDivs = document.getElementById('grid').childNodes;
+      cellDivs.forEach(cell => cell.classList.remove('wrong'));
+      selected = [];
+      renderGrid();
+    }, 600);
   }
 }
 
