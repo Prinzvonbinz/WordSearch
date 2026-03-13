@@ -7,96 +7,106 @@
 <style>
   body {
     font-family: Arial, sans-serif;
-    background-color: #f5f5f5;
-    color: #222;
+    background-color: #111;
+    color: #fff;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
     padding: 20px;
   }
-  body.dark {
-    background-color: #222;
-    color: #f5f5f5;
-  }
-  #controls {
-    margin-bottom: 20px;
-  }
-  button {
-    margin: 5px;
-    padding: 10px 15px;
-    cursor: pointer;
+  h1 {
+    margin-bottom: 10px;
   }
   #grid {
     display: grid;
-    grid-template-columns: repeat(4, 60px);
-    grid-gap: 5px;
+    grid-template-columns: repeat(4, 70px);
+    grid-gap: 8px;
+    margin-top: 20px;
   }
   .cell {
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    border: 1px solid #555;
+    font-size: 28px;
+    background-color: #222;
+    border-radius: 8px;
     cursor: pointer;
     user-select: none;
+    transition: background-color 0.2s;
+  }
+  .cell.selected {
+    background-color: #ffcc00;
+    color: #000;
   }
   #winPanel {
     display: none;
-    margin-top: 20px;
+    margin-top: 30px;
     text-align: center;
+  }
+  button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background-color: #ffcc00;
+    color: #000;
   }
 </style>
 </head>
 <body>
-<div id="controls">
-  <button onclick="toggleTheme()">Hell/Dunkelmodus</button>
-  <button onclick="startGame('normal')">Normalmodus</button>
-  <button onclick="startGame('endlos')">Endlosmodus</button>
-</div>
-
+<h1>Wortsuche 4x4</h1>
+<p>Finde die 4 Wörter!</p>
 <div id="grid"></div>
 
 <div id="winPanel">
-  <h2>Spiel beendet!</h2>
+  <h2>Gewonnen!</h2>
   <p id="stats"></p>
   <p id="foundWords"></p>
+  <button onclick="startGame()">Neustarten</button>
 </div>
 
 <script>
-const wordList = ["ABEN", "HUND", "MAUS", "TIER", "BAUM", "AUTO", "FISCH", "BROT"];
+const wordDatabase = ["HAUS", "HUND", "MAUS", "TIER", "BAUM", "AUTO", "GELD", "BROT"];
 let grid = [];
 let selected = [];
 let foundWords = [];
 let startTime;
-let timerInterval;
-let currentMode = 'normal';
-
-function toggleTheme() {
-  document.body.classList.toggle('dark');
-}
+let highscore = null;
 
 function shuffle(array) {
   return array.sort(() => Math.random() - 0.5);
 }
 
-function generateGrid(words) {
-  let letters = words.join('').split('');
-  letters = shuffle(letters);
-  grid = letters;
+function startGame() {
+  // reset
+  selected = [];
+  foundWords = [];
+  document.getElementById('winPanel').style.display = 'none';
+  
+  // 4 zufällige Wörter wählen
+  const words = shuffle(wordDatabase).slice(0, 4);
+  foundWords.wordsToFind = words; // speichern
+  const letters = words.join('').split('');
+  grid = shuffle(letters);
+  
+  startTime = Date.now();
   renderGrid();
 }
 
 function renderGrid() {
   const gridDiv = document.getElementById('grid');
   gridDiv.innerHTML = '';
-  grid.forEach((letter, index) => {
+  grid.forEach((letter, i) => {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.textContent = letter;
-    cell.onclick = () => selectLetter(index);
+    if (selected.includes(i)) cell.classList.add('selected');
+    cell.onclick = () => selectLetter(i);
     gridDiv.appendChild(cell);
   });
 }
@@ -104,76 +114,40 @@ function renderGrid() {
 function selectLetter(index) {
   if (selected.includes(index)) {
     selected = selected.filter(i => i !== index);
-    renderGrid();
-    return;
+  } else {
+    selected.push(index);
   }
-  selected.push(index);
-  highlightSelected();
-  if (selected.length === 4) {
-    checkWord();
-  }
-}
-
-function highlightSelected() {
-  const gridDiv = document.getElementById('grid');
-  gridDiv.childNodes.forEach((cell, i) => {
-    if (selected.includes(i)) {
-      cell.style.backgroundColor = 'yellow';
-    } else {
-      cell.style.backgroundColor = '';
-    }
-  });
+  renderGrid();
+  if (selected.length === 4) checkWord();
 }
 
 function checkWord() {
   const word = selected.map(i => grid[i]).join('');
-  if (wordList.includes(word)) {
+  if (foundWords.wordsToFind.includes(word) && !foundWords.includes(word)) {
     foundWords.push(word);
-    if (currentMode === 'normal') {
-      selected.forEach(i => grid[i] = '');
-    } else {
-      selected.forEach(i => grid[i] = '');
-      refillGrid();
-    }
+    selected.forEach(i => grid[i] = ''); // verschwinden lassen
     selected = [];
     renderGrid();
     checkWin();
   } else {
-    alert('Falsches Wort!');
+    alert("Falsches Wort!");
     selected = [];
     renderGrid();
   }
 }
 
-function refillGrid() {
-  // Endlos-Modus: neue Buchstaben aus 4 zufälligen Wörtern
-  const newWords = shuffle(wordList).slice(0,4);
-  let newLetters = newWords.join('').split('');
-  grid = shuffle(grid.filter(l => l !== '').concat(newLetters));
-}
-
 function checkWin() {
-  if (currentMode === 'normal' && grid.every(l => l === '')) {
-    endGame();
+  if (foundWords.length === 4) {
+    const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+    if (highscore === null || timeTaken < highscore) highscore = timeTaken;
+    document.getElementById('stats').textContent = `Zeit: ${timeTaken} Sekunden | Highscore: ${highscore} Sekunden`;
+    document.getElementById('foundWords').textContent = `Gefundene Wörter: ${foundWords.join(', ')}`;
+    document.getElementById('winPanel').style.display = 'block';
   }
 }
 
-function startGame(mode) {
-  currentMode = mode;
-  foundWords = [];
-  selected = [];
-  const initialWords = shuffle(wordList).slice(0,4);
-  generateGrid(initialWords);
-  startTime = Date.now();
-  document.getElementById('winPanel').style.display = 'none';
-}
-
-function endGame() {
-  const elapsed = Math.floor((Date.now() - startTime)/1000);
-  document.getElementById('stats').textContent = `Zeit: ${elapsed} Sekunden | Wörter gefunden: ${foundWords.length}`;
-  document.getElementById('foundWords').textContent = `Gefundene Wörter: ${foundWords.join(', ')}`;
-  document.getElementById('winPanel').style.display = 'block';
-}
+// Spiel sofort starten
+startGame();
 </script>
 </body>
 </html>
