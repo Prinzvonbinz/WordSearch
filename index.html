@@ -12,13 +12,22 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
     padding: 20px;
+    position: relative;
   }
   h1 {
     margin-bottom: 10px;
     font-size: 36px;
     text-shadow: 2px 2px #0000ff;
+  }
+  #hintButton {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 28px;
+    cursor: pointer;
+    user-select: none;
+    color: #1e90ff;
   }
   #grid {
     display: grid;
@@ -73,24 +82,27 @@
 </head>
 <body>
 <h1>Wortsuche 4x4</h1>
-<p>Finde die 4 Wörter!</p>
+<div id="hintButton" title="Tipp geben">💡</div>
 <div id="grid"></div>
 
 <div id="winPanel">
   <h2>Gewonnen!</h2>
   <p id="stats"></p>
   <p id="foundWords"></p>
+  <p id="hintUsed"></p>
   <button onclick="startGame()">Neustarten</button>
 </div>
 
 <script>
-const wordDatabase = ["HAUS", "HUND", "MAUS", "TIER", "BAUM", "AUTO", "GELD", "BROT"];
+const wordDatabase = ["ABEN", "HUND", "MAUS", "TIER", "BAUM", "AUTO", "FISCH", "BROT"];
 let grid = [];
 let selected = [];
 let foundWords = [];
 let wordsToFind = [];
 let startTime;
 let highscore = null;
+let hintsUsed = 0;
+let hintIndex = 0;
 
 function shuffle(array) {
   return array.sort(() => Math.random() - 0.5);
@@ -99,6 +111,8 @@ function shuffle(array) {
 function startGame() {
   selected = [];
   foundWords = [];
+  hintsUsed = 0;
+  hintIndex = 0;
   document.getElementById('winPanel').style.display = 'none';
   
   wordsToFind = shuffle(wordDatabase).slice(0,4);
@@ -141,6 +155,7 @@ function checkWord() {
   for (const w of wordsToFind) {
     if (!foundWords.includes(w) && w.split('').sort().join('') === wordFormed) {
       foundWords.push(w);
+      // alle gewählten Felder verschwinden
       selected.forEach(i => grid[i] = '');
       selected = [];
       renderGrid();
@@ -151,18 +166,17 @@ function checkWord() {
   }
 
   if (!found) {
-    // blinke rot
+    // nur die angeklickten 4 Buchstaben blinken rot
+    const gridDivs = document.getElementById('grid').childNodes;
     selected.forEach(i => {
-      const cellDivs = document.getElementById('grid').childNodes;
-      for (let cell of cellDivs) {
+      for (let cell of gridDivs) {
         if (cell.textContent === grid[i]) {
           cell.classList.add('wrong');
         }
       }
     });
     setTimeout(() => {
-      const cellDivs = document.getElementById('grid').childNodes;
-      cellDivs.forEach(cell => cell.classList.remove('wrong'));
+      gridDivs.forEach(cell => cell.classList.remove('wrong'));
       selected = [];
       renderGrid();
     }, 600);
@@ -175,8 +189,24 @@ function checkWin() {
     if (highscore === null || timeTaken < highscore) highscore = timeTaken;
     document.getElementById('stats').textContent = `Zeit: ${timeTaken} Sekunden | Highscore: ${highscore} Sekunden`;
     document.getElementById('foundWords').textContent = `Gefundene Wörter: ${foundWords.join(', ')}`;
+    document.getElementById('hintUsed').textContent = `Hinweise genutzt: ${hintsUsed} von 4`;
     document.getElementById('winPanel').style.display = 'block';
   }
+}
+
+// Hinweis-Funktion
+document.getElementById('hintButton').onclick = () => {
+  if (hintIndex >= wordsToFind.length) hintIndex = 0;
+  // nur Wörter anzeigen die noch nicht gefunden wurden
+  let hintWord = wordsToFind[hintIndex];
+  while (foundWords.includes(hintWord)) {
+    hintIndex++;
+    if (hintIndex >= wordsToFind.length) hintIndex = 0;
+    hintWord = wordsToFind[hintIndex];
+  }
+  alert(`Tipp: Ein Wort ist "${hintWord}"`);
+  hintsUsed++;
+  hintIndex++;
 }
 
 // Spiel sofort starten
