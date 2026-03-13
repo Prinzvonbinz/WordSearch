@@ -55,14 +55,6 @@
     transform: translateY(2px);
     box-shadow: 0 2px #00008b;
   }
-  .cell.wrong {
-    animation: blinkRed 0.3s ease 0s 2;
-  }
-  @keyframes blinkRed {
-    0% { background-color: #ff0000; color: #fff; }
-    50% { background-color: #222; color: #fff; }
-    100% { background-color: #ff0000; color: #fff; }
-  }
   #winPanel {
     display: none;
     margin-top: 30px;
@@ -94,7 +86,13 @@
 </div>
 
 <script>
-const wordDatabase = ["HAUS", "HUND", "MAUS", "TIER", "BAUM", "AUTO", "GELD", "BROT"];
+// 20 4-Buchstaben Wörter
+const wordDatabase = [
+  "HAUS","HUND","MAUS","TIER","BAUM","AUTO","GELD","BROT","REIM",
+  "LIED","MOND","AFFE","HAND","BILD","ROSE","BALL","GELB","BOOT",
+  "BLAU","DORN"
+];
+
 let grid = [];
 let selected = [];
 let foundWords = [];
@@ -166,20 +164,9 @@ function checkWord() {
   }
 
   if (!found) {
-    // nur die angeklickten 4 Buchstaben blinken rot
-    const gridDivs = document.getElementById('grid').childNodes;
-    selected.forEach(i => {
-      for (let cell of gridDivs) {
-        if (cell.textContent === grid[i]) {
-          cell.classList.add('wrong');
-        }
-      }
-    });
-    setTimeout(() => {
-      gridDivs.forEach(cell => cell.classList.remove('wrong'));
-      selected = [];
-      renderGrid();
-    }, 600);
+    // Fehler: einfach zurücksetzen
+    selected = [];
+    renderGrid();
   }
 }
 
@@ -197,7 +184,6 @@ function checkWin() {
 // Hinweis-Funktion
 document.getElementById('hintButton').onclick = () => {
   if (hintIndex >= wordsToFind.length) hintIndex = 0;
-  // nur Wörter anzeigen die noch nicht gefunden wurden
   let hintWord = wordsToFind[hintIndex];
   while (foundWords.includes(hintWord)) {
     hintIndex++;
