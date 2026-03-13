@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wortsuche 4x4</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #222;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px;
+  }
+  body.dark {
+    background-color: #222;
+    color: #f5f5f5;
+  }
+  #controls {
+    margin-bottom: 20px;
+  }
+  button {
+    margin: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+  }
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(4, 60px);
+    grid-gap: 5px;
+  }
+  .cell {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 1px solid #555;
+    cursor: pointer;
+    user-select: none;
+  }
+  #winPanel {
+    display: none;
+    margin-top: 20px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div id="controls">
+  <button onclick="toggleTheme()">Hell/Dunkelmodus</button>
+  <button onclick="startGame('normal')">Normalmodus</button>
+  <button onclick="startGame('endlos')">Endlosmodus</button>
+</div>
+
+<div id="grid"></div>
+
+<div id="winPanel">
+  <h2>Spiel beendet!</h2>
+  <p id="stats"></p>
+  <p id="foundWords"></p>
+</div>
+
+<script>
+const wordList = ["ABEN", "HUND", "MAUS", "TIER", "BAUM", "AUTO", "FISCH", "BROT"];
+let grid = [];
+let selected = [];
+let foundWords = [];
+let startTime;
+let timerInterval;
+let currentMode = 'normal';
+
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+}
+
+function shuffle(array) {
+  return array.sort(() => Math.random() - 0.5);
+}
+
+function generateGrid(words) {
+  let letters = words.join('').split('');
+  letters = shuffle(letters);
+  grid = letters;
+  renderGrid();
+}
+
+function renderGrid() {
+  const gridDiv = document.getElementById('grid');
+  gridDiv.innerHTML = '';
+  grid.forEach((letter, index) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.textContent = letter;
+    cell.onclick = () => selectLetter(index);
+    gridDiv.appendChild(cell);
+  });
+}
+
+function selectLetter(index) {
+  if (selected.includes(index)) {
+    selected = selected.filter(i => i !== index);
+    renderGrid();
+    return;
+  }
+  selected.push(index);
+  highlightSelected();
+  if (selected.length === 4) {
+    checkWord();
+  }
+}
+
+function highlightSelected() {
+  const gridDiv = document.getElementById('grid');
+  gridDiv.childNodes.forEach((cell, i) => {
+    if (selected.includes(i)) {
+      cell.style.backgroundColor = 'yellow';
+    } else {
+      cell.style.backgroundColor = '';
+    }
+  });
+}
+
+function checkWord() {
+  const word = selected.map(i => grid[i]).join('');
+  if (wordList.includes(word)) {
+    foundWords.push(word);
+    if (currentMode === 'normal') {
+      selected.forEach(i => grid[i] = '');
+    } else {
+      selected.forEach(i => grid[i] = '');
+      refillGrid();
+    }
+    selected = [];
+    renderGrid();
+    checkWin();
+  } else {
+    alert('Falsches Wort!');
+    selected = [];
+    renderGrid();
+  }
+}
+
+function refillGrid() {
+  // Endlos-Modus: neue Buchstaben aus 4 zufälligen Wörtern
+  const newWords = shuffle(wordList).slice(0,4);
+  let newLetters = newWords.join('').split('');
+  grid = shuffle(grid.filter(l => l !== '').concat(newLetters));
+}
+
+function checkWin() {
+  if (currentMode === 'normal' && grid.every(l => l === '')) {
+    endGame();
+  }
+}
+
+function startGame(mode) {
+  currentMode = mode;
+  foundWords = [];
+  selected = [];
+  const initialWords = shuffle(wordList).slice(0,4);
+  generateGrid(initialWords);
+  startTime = Date.now();
+  document.getElementById('winPanel').style.display = 'none';
+}
+
+function endGame() {
+  const elapsed = Math.floor((Date.now() - startTime)/1000);
+  document.getElementById('stats').textContent = `Zeit: ${elapsed} Sekunden | Wörter gefunden: ${foundWords.length}`;
+  document.getElementById('foundWords').textContent = `Gefundene Wörter: ${foundWords.join(', ')}`;
+  document.getElementById('winPanel').style.display = 'block';
+}
+</script>
+</body>
+</html>
